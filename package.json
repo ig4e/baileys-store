@@ -1,11 +1,11 @@
 {
   "name": "ig4e-baileys-store",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Minimal Baileys data storage for your favorite DBMS built with Prisma",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "repository": "https://github.com/kevineduardo/baileys-store.git",
-  "author": "Kevin Eduardo (https://github.com/kevineduardo)",
+  "repository": "https://github.com/ig4e/baileys-store",
+  "author": "Ahmed Mohamed (https://github.com/ig4e)",
   "license": "MIT",
   "scripts": {
     "build": "tsc",

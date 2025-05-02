@@ -7,7 +7,7 @@ import type {
 import { jidNormalizedUser, toNumber } from '@whiskeysockets/baileys';
 import { useLogger, usePrisma } from '../shared';
 import type { BaileysEventHandler } from '../types';
-import { transformPrisma } from '../utils';
+import { fixPrismaTypes, transformPrisma } from '../utils';
 
 const getKeyAuthor = (key: WAMessageKey | undefined | null) =>
   (key?.fromMe ? 'me' : key?.participant || key?.remoteJid) || '';
@@ -23,12 +23,16 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
         if (isLatest) await tx.message.deleteMany({ where: { sessionId } });
 
         await tx.message.createMany({
-          data: messages.map((message) => ({
-            ...transformPrisma(message),
-            remoteJid: message.key.remoteJid!,
-            id: message.key.id!,
-            sessionId,
-          })),
+          data: messages.map((message) => {
+            const transformed = transformPrisma(message);
+            const fixed = fixPrismaTypes(transformed);
+            return {
+              ...fixed,
+              remoteJid: message.key.remoteJid!,
+              id: message.key.id!,
+              sessionId,
+            };
+          }),
         });
       });
       logger.info({ messages: messages.length }, 'Synced messages');
@@ -44,7 +48,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
         for (const message of messages) {
           try {
             const jid = jidNormalizedUser(message.key.remoteJid!);
-            const data = transformPrisma(message);
+            const raw = transformPrisma(message);
+            const data = fixPrismaTypes(raw);
+
             await prisma.message.upsert({
               select: { pkId: true },
               create: { ...data, remoteJid: jid, id: message.key.id!, sessionId },
@@ -82,6 +88,9 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
           }
 
           const data = { ...prevData, ...update } as proto.IWebMessageInfo;
+          const transformed = transformPrisma(data);
+          const fixed = fixPrismaTypes(transformed);
+
           await tx.message.update({
             where: {
               sessionId_remoteJid_id: {
@@ -91,7 +100,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
               },
             },
             data: {
-              ...transformPrisma(data),
+              ...fixed,
               id: data.key.id!,
               remoteJid: data.key.remoteJid!,
               sessionId,
@@ -169,7 +178,7 @@ export default function messageHandler(sessionId: string, event: BaileysEventEmi
 
           const authorID = getKeyAuthor(reaction.key);
           const reactions = ((message.reactions || []) as proto.IReaction[]).filter(
-            (r) => getKeyAuthor(r.key) !== authorID
+            (r) => getKeyAuthor(r.key) !== authorID,
           );
 
           if (reaction.text) reactions.push(reaction);
