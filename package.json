@@ -1,5 +1,5 @@
 {
-  "name": "@kevineduardo/baileys-store",
+  "name": "ig4e-baileys-store",
   "version": "1.0.12",
   "description": "Minimal Baileys data storage for your favorite DBMS built with Prisma",
   "main": "dist/index.js",

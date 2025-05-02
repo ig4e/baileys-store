@@ -67,8 +67,85 @@ initStore({
 // Create a store and start listening to the events
 const store = new Store('unique-session-id-here', socket.ev);
 
+// Or create a store with custom storage options
+const customStore = new Store('unique-session-id-here', socket.ev, {
+  storeChats: true,     // Set to false to disable storing chats
+  storeMessages: true,  // Set to false to disable storing messages
+  storeContacts: false, // Set to false to disable storing contacts
+});
+
 // That's it, you can now query from the prisma client without having to worry about handling the events
 const messages = prisma.message.findMany();
+```
+
+## Session Management
+
+This library also provides a session store to manage your Baileys authentication credentials:
+
+```ts
+import makeWASocket from '@whiskeysockets/baileys';
+import { PrismaClient } from '@prisma/client';
+import { initStore, useSession } from '@kevineduardo/baileys-store';
+
+const prisma = new PrismaClient();
+const sessionId = 'your-unique-session-id';
+
+// Initialize the store
+initStore({ prisma });
+
+// Use the session to store auth state
+const { state, saveCreds } = await useSession(sessionId);
+
+// Create a WhatsApp socket with the session state
+const socket = makeWASocket({
+  auth: state,
+  // ... other socket options
+});
+
+// Listen to credential updates
+socket.ev.on('creds.update', saveCreds);
+
+// You can now use your socket as normal
+```
+
+The session store will automatically save credentials to your database using Prisma, allowing you to maintain sessions between restarts.
+
+## Combined Usage
+
+You can use both the data store and session store together for a complete solution:
+
+```ts
+import makeWASocket from '@whiskeysockets/baileys';
+import { PrismaClient } from '@prisma/client';
+import { initStore, Store, useSession } from '@kevineduardo/baileys-store';
+
+const prisma = new PrismaClient();
+const sessionId = 'your-unique-session-id';
+
+// Initialize the store
+initStore({ prisma });
+
+// Use the session store for auth
+const { state, saveCreds } = await useSession(sessionId);
+
+// Create a WhatsApp socket
+const socket = makeWASocket({
+  auth: state,
+  // ... other socket options
+});
+
+// Listen to credential updates
+socket.ev.on('creds.update', saveCreds);
+
+// Initialize the data store with storage options
+const store = new Store(sessionId, socket.ev, {
+  storeChats: true,
+  storeMessages: true, 
+  storeContacts: true,
+});
+
+// Now both your auth credentials and messages/chats/contacts 
+// will be stored in the database
 ```
 
 ## Contributing
